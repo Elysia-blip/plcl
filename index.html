@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7段数码管 + 前N个LED指示灯</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: #121212;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 16px;
+        }
+
+        .panel {
+            background: #1e1e1e;
+            padding: 32px 40px;
+            border-radius: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 32px;
+            border: 1px solid #2e2e2e;
+        }
+
+        /* 8个圆形LED指示灯 */
+        .led-row {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 8px 0;
+        }
+
+        .led {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: #3a3a3a;  /* 熄灭灰色 */
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.8), 0 0 0 1px #2a2a2a;
+            transition: background 0.1s ease, box-shadow 0.1s ease;
+            border: 1px solid #4a4a4a;
+        }
+
+        /* 点亮状态：亮绿色 + 发光 */
+        .led.active {
+            background: #2eff7a;
+            box-shadow: 0 0 18px #2eff7a, 0 0 8px #8affb0, inset 0 0 6px #ffffffc0;
+            border-color: #b0ffc0;
+        }
+
+        /* 7段数码管 */
+        .segment-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #0b0b0b;
+            padding: 20px 30px;
+            border-radius: 24px;
+            box-shadow: inset 0 0 0 2px #2d2d2d, 0 12px 24px #00000080;
+        }
+
+        .digit-7seg {
+            position: relative;
+            width: 140px;
+            height: 220px;
+        }
+
+        /* 每一个段都是绝对定位的矩形 */
+        .segment {
+            position: absolute;
+            background: #2a2a2a;  /* 熄灭深灰色 */
+            border-radius: 10px;
+            transition: background 0.1s, box-shadow 0.1s;
+        }
+
+        /* 点亮红色，并带有发光效果 */
+        .segment.on {
+            background: #ff3a3a;
+            box-shadow: 0 0 12px #ff3a3a, 0 0 25px #ff6a6a;
+        }
+
+        /* 段位置 (经典的7段布局) */
+        .seg-a { top: 6px; left: 20px; width: 100px; height: 20px; }
+        .seg-b { top: 26px; right: 6px; width: 20px; height: 80px; }
+        .seg-c { bottom: 26px; right: 6px; width: 20px; height: 80px; }
+        .seg-d { bottom: 6px; left: 20px; width: 100px; height: 20px; }
+        .seg-e { bottom: 26px; left: 6px; width: 20px; height: 80px; }
+        .seg-f { top: 26px; left: 6px; width: 20px; height: 80px; }
+        .seg-g { top: 102px; left: 20px; width: 100px; height: 20px; }
+
+        /* 输入区域 */
+        .input-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .input-area label {
+            color: #bbbbbb;
+            font-size: 16px;
+            letter-spacing: 1px;
+            font-weight: 500;
+            text-transform: uppercase;
+            opacity: 0.8;
+        }
+
+        .number-input {
+            width: 200px;
+            padding: 16px 20px;
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+            background: #111111;
+            border: 2px solid #3a3a3a;
+            border-radius: 60px;
+            color: #f0f0f0;
+            outline: none;
+            transition: border 0.2s, box-shadow 0.2s;
+            box-shadow: inset 0 4px 10px #00000080, 0 2px 6px #00000040;
+        }
+
+        .number-input:focus {
+            border-color: #5a5a5a;
+            box-shadow: inset 0 4px 10px #00000080, 0 0 0 4px #2eff7a40;
+        }
+
+        /* 移除数字输入框的上下箭头 */
+        .number-input::-webkit-outer-spin-button,
+        .number-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .number-input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .hint {
+            color: #777;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+<div class="panel">
+    <!-- 8个LED指示灯 -->
+    <div class="led-row" id="ledRow">
+        <div class="led" data-index="0"></div>
+        <div class="led" data-index="1"></div>
+        <div class="led" data-index="2"></div>
+        <div class="led" data-index="3"></div>
+        <div class="led" data-index="4"></div>
+        <div class="led" data-index="5"></div>
+        <div class="led" data-index="6"></div>
+        <div class="led" data-index="7"></div>
+    </div>
+
+    <!-- 7段数码管 -->
+    <div class="segment-display">
+        <div class="digit-7seg" id="digitDisplay">
+            <!-- 段顺序：a, b, c, d, e, f, g -->
+            <div class="segment seg-a" data-seg="a"></div>
+            <div class="segment seg-b" data-seg="b"></div>
+            <div class="segment seg-c" data-seg="c"></div>
+            <div class="segment seg-d" data-seg="d"></div>
+            <div class="segment seg-e" data-seg="e"></div>
+            <div class="segment seg-f" data-seg="f"></div>
+            <div class="segment seg-g" data-seg="g"></div>
+        </div>
+    </div>
+
+    <!-- 数字输入框 -->
+    <div class="input-area">
+        <label for="numberInput">输入数字 0–9</label>
+        <input type="number" id="numberInput" class="number-input" min="0" max="9" step="1" value="0" placeholder="0–9">
+        <div class="hint">输入 n，前 n 个 LED 点亮</div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        // 获取DOM元素
+        const ledElements = document.querySelectorAll('.led');
+        const segmentElements = {
+            a: document.querySelector('.seg-a'),
+            b: document.querySelector('.seg-b'),
+            c: document.querySelector('.seg-c'),
+            d: document.querySelector('.seg-d'),
+            e: document.querySelector('.seg-e'),
+            f: document.querySelector('.seg-f'),
+            g: document.querySelector('.seg-g')
+        };
+        const numberInput = document.getElementById('numberInput');
+
+        // ---------- 7段数码管真值表 (1表示亮, 0表示灭) ----------
+        // 段顺序: a, b, c, d, e, f, g
+        const segmentMap = {
+            0: [1, 1, 1, 1, 1, 1, 0], // 0: a,b,c,d,e,f亮
+            1: [0, 1, 1, 0, 0, 0, 0], // 1: b,c亮
+            2: [1, 1, 0, 1, 1, 0, 1], // 2: a,b,d,e,g亮
+            3: [1, 1, 1, 1, 0, 0, 1], // 3: a,b,c,d,g亮
+            4: [0, 1, 1, 0, 0, 1, 1], // 4: b,c,f,g亮
+            5: [1, 0, 1, 1, 0, 1, 1], // 5: a,c,d,f,g亮
+            6: [1, 0, 1, 1, 1, 1, 1], // 6: a,c,d,e,f,g亮
+            7: [1, 1, 1, 0, 0, 0, 0], // 7: a,b,c亮
+            8: [1, 1, 1, 1, 1, 1, 1], // 8: 全亮
+            9: [1, 1, 1, 1, 0, 1, 1]  // 9: a,b,c,d,f,g亮
+        };
+
+        const segmentNames = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+
+        // ---------- 根据数字更新数码管 ----------
+        function updateSegments(digit) {
+            const segments = segmentMap[digit];
+            if (!segments) return;
+
+            segmentNames.forEach((name, idx) => {
+                const segEl = segmentElements[name];
+                if (!segEl) return;
+                if (segments[idx] === 1) {
+                    segEl.classList.add('on');
+                } else {
+                    segEl.classList.remove('on');
+                }
+            });
+        }
+
+        // ---------- 根据数字更新LED：前 n 个点亮 (n = digit) ----------
+        // 数字 0: 全部熄灭；数字 1: 第1个亮；数字 2: 第1、2个亮；... 数字 8: 前8个全亮。
+        // 注意：输入范围 0-9，但 9 时只有 8 个灯，所以 9 会让 8 个灯全部点亮（超出部分忽略）
+        function updateLeds(digit) {
+            // 需要点亮的 LED 数量：如果 digit >= 8，则全部点亮；否则点亮前 digit 个
+            const count = digit >= 8 ? 8 : digit;
+
+            ledElements.forEach((led, index) => {
+                // index: 0~7 (第1个LED对应索引0)
+                if (index < count) {
+                    led.classList.add('active');
+                } else {
+                    led.classList.remove('active');
+                }
+            });
+        }
+
+        // ---------- 统一更新函数 ----------
+        function updateDisplay(digit) {
+            // 再次确保是整数 0-9
+            if (!Number.isInteger(digit) || digit < 0 || digit > 9) return;
+            updateSegments(digit);
+            updateLeds(digit);
+        }
+
+        // ---------- 输入框事件处理 ----------
+        function handleInput() {
+            const rawValue = numberInput.value.trim();
+            // 空字符串忽略（保持之前状态）
+            if (rawValue === '') return;
+
+            // 仅当输入为单个数字字符且为 0-9 时更新
+            if (/^[0-9]$/.test(rawValue)) {
+                const digit = parseInt(rawValue, 10);
+                updateDisplay(digit);
+            }
+            // 其他情况（非0-9、多位数字、负号等）不响应
+        }
+
+        // 监听 input 事件（实时）
+        numberInput.addEventListener('input', handleInput);
+
+        // 页面加载完成后初始化：显示 0
+        window.addEventListener('DOMContentLoaded', () => {
+            numberInput.value = '0';
+            updateDisplay(0);
+        });
+
+        // 额外：如果用户通过键盘输入超出范围的数字（如 10），input 事件会触发，但正则不匹配，因此忽略。
+        // 如果用户输入小数点或 e，type=number 可能会允许，但正则只匹配单个数字，所以也不会响应。
+        // 符合需求：输入非0-9字符不响应。
+
+        // 对于输入框为空的情况，保持显示不变，也符合“不响应”。
+    })();
+</script>
+</body>
+</html>
